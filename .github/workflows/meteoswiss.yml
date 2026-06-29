@@ -1,0 +1,31 @@
+name: MeteoSwiss text forecast
+
+on:
+  schedule:
+    - cron: '15 4,7,10,13,16 * * *'   # several times a day (UTC); MeteoSwiss updates ~2x/day
+  workflow_dispatch:                   # lets you run it manually from the Actions tab
+
+permissions:
+  contents: write                      # allows the action to commit meteoswiss.json back
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Scrape MeteoSwiss
+        run: node scrape.js
+      - name: Commit updated forecast
+        run: |
+          git config user.name  "meteoswiss-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add meteoswiss.json
+          git diff --quiet --cached || git commit -m "Update MeteoSwiss text forecast"
+          git push
